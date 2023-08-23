@@ -2,7 +2,10 @@ package com.programacionparaaprender.config;
 
 import org.springframework.context.annotation.Configuration;
 
+import com.programacionparaaprender.app.SpringBatchApplication;
 import com.programacionparaaprender.service.SecondTasklet;
+
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.batch.core.Job;
@@ -16,6 +19,7 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 
 @Configuration
+@Slf4j
 public class SampleJob {
 
 	@Autowired
@@ -53,6 +57,7 @@ public class SampleJob {
 			@Override
 			public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 				System.out.println("This is first tasklet");
+				log.info("This is first tasklet");
 				return RepeatStatus.FINISHED;
 			}
 		};
