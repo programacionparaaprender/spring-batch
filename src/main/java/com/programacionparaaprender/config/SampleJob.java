@@ -1,6 +1,9 @@
 package com.programacionparaaprender.config;
 
 import org.springframework.context.annotation.Configuration;
+
+import com.programacionparaaprender.service.SecondTasklet;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -21,16 +24,27 @@ public class SampleJob {
 	@Autowired
 	private StepBuilderFactory stepBuilderFactory;
 	
+	@Autowired
+	private SecondTasklet secondTasklet;
+	
 	@Bean
 	public Job firstJob() {
 		return jobBuilderFactory.get("First Job")
 		.start(firstStep())
+		.next(secondStep())
 		.build();
 	}
 	
 	private Step firstStep() {
 		return stepBuilderFactory.get("First step")
 		.tasklet(firstTasklet())
+		.build();
+	}
+	
+	private Step secondStep() {
+		return stepBuilderFactory.get("Second step")
+		.tasklet(secondTaskletMetodo(1))
+		.tasklet(secondTasklet)
 		.build();
 	}
 	
@@ -42,6 +56,10 @@ public class SampleJob {
 				return RepeatStatus.FINISHED;
 			}
 		};
+	}
+	
+	private Tasklet secondTaskletMetodo(int id) {
+		return new SecondTasklet(id);
 	}
 
 }
