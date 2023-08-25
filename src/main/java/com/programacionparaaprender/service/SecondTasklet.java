@@ -6,7 +6,10 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class SecondTasklet implements Tasklet{
 
 	private int id;
@@ -21,7 +24,9 @@ public class SecondTasklet implements Tasklet{
 	
 	@Override
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
-		System.out.printf("This is second tasklet %d\n", id);
+		String cadena = String.format("This is second tasklet %d\n", id);
+		System.out.printf(cadena);
+		log.info(cadena);
 		return RepeatStatus.FINISHED;
 	}
 
