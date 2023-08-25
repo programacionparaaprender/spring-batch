@@ -12,7 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class SecondTasklet implements Tasklet{
 
-	private int id;
+	private int id = 0;
 	
 	public SecondTasklet(int id) {
 		this.id = id;

@@ -14,6 +14,7 @@ public class SpringBatchApplication {
 
 	public static void main(String[] args) {
 		log.info("Funciona log4j");
+		System.out.println("Funciona log4j");
 		SpringApplication.run(SpringBatchApplication.class, args);
 	}
 
