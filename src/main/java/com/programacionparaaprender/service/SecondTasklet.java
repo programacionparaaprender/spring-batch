@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@Slf4j
 public class SecondTasklet implements Tasklet{
 
 	private int id = 0;
@@ -26,7 +25,7 @@ public class SecondTasklet implements Tasklet{
 	public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 		String cadena = String.format("This is second tasklet %d\n", id);
 		System.out.printf(cadena);
-		log.info(cadena);
+		System.out.println(chunkContext.getStepContext().getJobExecutionContext());
 		return RepeatStatus.FINISHED;
 	}
 
