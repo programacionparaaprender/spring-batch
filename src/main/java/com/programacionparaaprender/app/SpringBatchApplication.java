@@ -15,7 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 	 ,"com.programacionparaaprender.reader"
 	 ,"com.programacionparaaprender.processor"
 	 ,"com.programacionparaaprender.writer"
-	 ,"com.programacionparaaprender.controllers"})
+	 ,"com.programacionparaaprender.controllers"
+	 ,"com.infybuzz.config", "com.infybuzz.listener", 
+	"com.infybuzz.reader", "com.infybuzz.processor", 
+	"com.infybuzz.writer"})
 @EnableAsync
 @EnableScheduling
 public class SpringBatchApplication {

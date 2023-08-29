@@ -71,14 +71,43 @@ public class SampleJob {
 	@Autowired
 	FirstItemWriterJson firstItemWriterJson; 
 	
+	
 	@Bean
 	public Job secondJob() {
 		return jobBuilderFactory.get("Second Job")
 		.incrementer(new RunIdIncrementer())
-		.start(firstChunkStep())
-		.next(secondStep())
+		.start(firstChunkStepNew())
+		//.next(secondStep())
 		.build();
 	}
+	
+	private Step firstChunkStepNew() {
+		return stepBuilderFactory.get("First Chunk Step")
+				.<StudentJson, StudentJson>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(jsonItemReaderNew(null))
+				//.processor(firstItemProcessor)
+				.writer(firstItemWriterJson)
+				.build();
+	}
+	
+	@StepScope
+	@Bean
+	public JsonItemReader<StudentJson> jsonItemReaderNew(
+			@Value("#{jobParameters['inputFileJson']}") FileSystemResource fileSystemResource) {
+		JsonItemReader<StudentJson> jsonItemReader = 
+				new JsonItemReader<StudentJson>();
+		
+		jsonItemReader.setResource(fileSystemResource);
+		jsonItemReader.setJsonObjectReader(
+				new JacksonJsonObjectReader<>(StudentJson.class));
+		
+		jsonItemReader.setMaxItemCount(8);
+		jsonItemReader.setCurrentItemCount(2);
+		
+		return jsonItemReader;
+	}
+	
 	private Step firstChunkStep() {
 		return stepBuilderFactory.get("First Chunk Step")
 				.<StudentJson, StudentJson>chunk(3)
@@ -108,8 +137,8 @@ public class SampleJob {
 				.build();
 	}
 	
-	@StepScope
-	@Bean
+	//@StepScope
+	//@Bean
 	public FlatFileItemReader<StudentCsv> flatFileItemReader(
 			@Value("#{jobParameters['inputFile']}") FileSystemResource fileSystemResource) {
 		FlatFileItemReader<StudentCsv> flatFileItemReader = 
