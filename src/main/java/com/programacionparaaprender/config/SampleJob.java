@@ -2,10 +2,12 @@ package com.programacionparaaprender.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
 import com.programacionparaaprender.app.SpringBatchApplication;
 import com.programacionparaaprender.model.StudentCsv;
+import com.programacionparaaprender.model.StudentJdbc;
 import com.programacionparaaprender.model.StudentJson;
 import com.programacionparaaprender.model.StudentXml;
 import com.programacionparaaprender.processor.FirstItemProcessor;
@@ -15,12 +17,15 @@ import com.programacionparaaprender.service.FirstStepListener;
 import com.programacionparaaprender.service.SecondTasklet;
 import com.programacionparaaprender.writer.FirstItemWriter;
 import com.programacionparaaprender.writer.FirstItemWriterCsv;
+import com.programacionparaaprender.writer.FirstItemWriterJdbc;
 import com.programacionparaaprender.writer.FirstItemWriterJson;
 import com.programacionparaaprender.writer.FirstItemWriterXml;
 
 import org.springframework.context.annotation.Bean;
 
 import java.io.File;
+
+import javax.sql.DataSource;
 
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -31,6 +36,7 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
@@ -78,13 +84,50 @@ public class SampleJob {
 	@Autowired
 	FirstItemWriterXml firstItemWriterXml; 
 	
+	@Autowired
+	FirstItemWriterJdbc firstItemWriterJdbc; 
+	
+	@Autowired
+	private DataSource datasource;
+	
 	@Bean
 	public Job secondJob() {
 		return jobBuilderFactory.get("Second Job")
 		.incrementer(new RunIdIncrementer())
-		.start(firstChunkStepNew2())
+		.start(firstChunkStepNew3())
 		//.next(secondStep())
 		.build();
+	}
+	
+	private Step firstChunkStepNew3() {
+		return stepBuilderFactory.get("First Chunk Step")
+				.<StudentJdbc, StudentJdbc>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader())
+				//.processor(firstItemProcessor)
+				.writer(firstItemWriterJdbc)
+				.build();
+	}
+	
+	
+	public JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader() {
+		JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader = 
+				new JdbcCursorItemReader<StudentJdbc>();
+		
+		jdbcCursorItemReader.setDataSource(datasource);
+		jdbcCursorItemReader.setSql(
+				"select id, first_name as firstName, last_name as lastName,"
+				+ "email from student");
+		
+		jdbcCursorItemReader.setRowMapper(new BeanPropertyRowMapper<StudentJdbc>() {
+			{
+				setMappedClass(StudentJdbc.class);
+			}
+		});
+		jdbcCursorItemReader.setCurrentItemCount(2);
+		jdbcCursorItemReader.setMaxItemCount(8);
+		
+		return jdbcCursorItemReader;
 	}
 	
 	private Step firstChunkStepNew2() {
