@@ -2,10 +2,12 @@ package com.programacionparaaprender.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
 import com.programacionparaaprender.app.SpringBatchApplication;
 import com.programacionparaaprender.model.StudentCsv;
 import com.programacionparaaprender.model.StudentJson;
+import com.programacionparaaprender.model.StudentXml;
 import com.programacionparaaprender.processor.FirstItemProcessor;
 import com.programacionparaaprender.reader.FirstItemReader;
 import com.programacionparaaprender.service.FirstJobListener;
@@ -14,6 +16,7 @@ import com.programacionparaaprender.service.SecondTasklet;
 import com.programacionparaaprender.writer.FirstItemWriter;
 import com.programacionparaaprender.writer.FirstItemWriterCsv;
 import com.programacionparaaprender.writer.FirstItemWriterJson;
+import com.programacionparaaprender.writer.FirstItemWriterXml;
 
 import org.springframework.context.annotation.Bean;
 
@@ -34,6 +37,7 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
 import org.springframework.batch.item.json.JsonItemReader;
+import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -71,15 +75,43 @@ public class SampleJob {
 	@Autowired
 	FirstItemWriterJson firstItemWriterJson; 
 	
+	@Autowired
+	FirstItemWriterXml firstItemWriterXml; 
 	
 	@Bean
 	public Job secondJob() {
 		return jobBuilderFactory.get("Second Job")
 		.incrementer(new RunIdIncrementer())
-		.start(firstChunkStepNew())
+		.start(firstChunkStepNew2())
 		//.next(secondStep())
 		.build();
 	}
+	
+	private Step firstChunkStepNew2() {
+		return stepBuilderFactory.get("First Chunk Step")
+				.<StudentXml, StudentXml>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(staxEventItemReader(null))
+				//.processor(firstItemProcessor)
+				.writer(firstItemWriterXml)
+				.build();
+	}
+	
+	@StepScope
+	@Bean
+	public StaxEventItemReader<StudentXml> staxEventItemReader(
+			@Value("#{jobParameters['inputFileXml']}") FileSystemResource fileSystemResource) {
+		StaxEventItemReader<StudentXml> staxEventItemReader = new StaxEventItemReader<StudentXml>();
+		staxEventItemReader.setResource(fileSystemResource);
+		staxEventItemReader.setFragmentRootElementName("student");
+		staxEventItemReader.setUnmarshaller(new Jaxb2Marshaller() {
+			{
+				setClassesToBeBound(StudentXml.class);
+			}
+		});
+		return staxEventItemReader;
+	}
+	
 	
 	private Step firstChunkStepNew() {
 		return stepBuilderFactory.get("First Chunk Step")
@@ -91,10 +123,16 @@ public class SampleJob {
 				.build();
 	}
 	
+	
+	
 	@StepScope
 	@Bean
 	public JsonItemReader<StudentJson> jsonItemReaderNew(
 			@Value("#{jobParameters['inputFileJson']}") FileSystemResource fileSystemResource) {
+		
+		FileSystemResource fileSystemResource1 = new FileSystemResource(
+			new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\inputFiles\\students.json"));
+		
 		JsonItemReader<StudentJson> jsonItemReader = 
 				new JsonItemReader<StudentJson>();
 		
