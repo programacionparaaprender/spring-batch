@@ -9,16 +9,17 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 import lombok.extern.slf4j.Slf4j;
 
+
 @SpringBootApplication
 @EnableBatchProcessing
-@ComponentScan({"com.programacionparaaprender.config", "com.programacionparaaprender.service"
+@ComponentScan({"com.programacionparaaprender.config"
+	,"com.programacionparaaprender.repository"
+	, "com.programacionparaaprender.service"
 	 ,"com.programacionparaaprender.reader"
 	 ,"com.programacionparaaprender.processor"
 	 ,"com.programacionparaaprender.writer"
 	 ,"com.programacionparaaprender.controllers"
-	 ,"com.infybuzz.config", "com.infybuzz.listener", 
-	"com.infybuzz.reader", "com.infybuzz.processor", 
-	"com.infybuzz.writer"})
+	 })
 @EnableAsync
 @EnableScheduling
 public class SpringBatchApplication {

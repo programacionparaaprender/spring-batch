@@ -10,12 +10,14 @@ import com.programacionparaaprender.app.SpringBatchApplication;
 import com.programacionparaaprender.model.StudentCsv;
 import com.programacionparaaprender.model.StudentJdbc;
 import com.programacionparaaprender.model.StudentJson;
+import com.programacionparaaprender.model.StudentResponse;
 import com.programacionparaaprender.model.StudentXml;
 import com.programacionparaaprender.processor.FirstItemProcessor;
 import com.programacionparaaprender.reader.FirstItemReader;
 import com.programacionparaaprender.service.FirstJobListener;
 import com.programacionparaaprender.service.FirstStepListener;
 import com.programacionparaaprender.service.SecondTasklet;
+import com.programacionparaaprender.service.StudentService;
 import com.programacionparaaprender.writer.FirstItemWriter;
 import com.programacionparaaprender.writer.FirstItemWriterCsv;
 import com.programacionparaaprender.writer.FirstItemWriterJdbc;
@@ -37,6 +39,7 @@ import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
+import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
@@ -93,6 +96,10 @@ public class SampleJob {
 	@Autowired
 	private DataSource datasource;
 	
+	@Autowired
+	private StudentService studentService;
+	
+	/*
 	@Bean
 	@ConfigurationProperties(prefix = "spring.datasource")
 	@Primary
@@ -105,6 +112,7 @@ public class SampleJob {
 	public DataSource universitydatasource() {
 		return DataSourceBuilder.create().build();
 	}
+	*/
 	
 	@Bean
 	public Job secondJob() {
@@ -113,6 +121,16 @@ public class SampleJob {
 		.start(firstChunkStepNew3())
 		//.next(secondStep())
 		.build();
+	}
+	
+	public ItemReaderAdapter<StudentResponse> itemReaderAdapter() {
+		ItemReaderAdapter<StudentResponse> itemReaderAdapter = 
+				new ItemReaderAdapter<StudentResponse>();
+		
+		itemReaderAdapter.setTargetObject(studentService);
+		itemReaderAdapter.setTargetMethod("getStudent");
+		
+		return itemReaderAdapter;
 	}
 	
 	private Step firstChunkStepNew3() {
