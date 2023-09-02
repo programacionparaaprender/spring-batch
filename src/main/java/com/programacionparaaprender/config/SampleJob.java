@@ -22,6 +22,7 @@ import com.programacionparaaprender.writer.FirstItemWriter;
 import com.programacionparaaprender.writer.FirstItemWriterCsv;
 import com.programacionparaaprender.writer.FirstItemWriterJdbc;
 import com.programacionparaaprender.writer.FirstItemWriterJson;
+import com.programacionparaaprender.writer.FirstItemWriterResponse;
 import com.programacionparaaprender.writer.FirstItemWriterXml;
 
 import org.springframework.context.annotation.Bean;
@@ -94,6 +95,10 @@ public class SampleJob {
 	FirstItemWriterJdbc firstItemWriterJdbc; 
 	
 	@Autowired
+	FirstItemWriterResponse firstItemWriterResponse; 
+	
+	
+	@Autowired
 	private DataSource datasource;
 	
 	@Autowired
@@ -118,9 +123,19 @@ public class SampleJob {
 	public Job secondJob() {
 		return jobBuilderFactory.get("Second Job")
 		.incrementer(new RunIdIncrementer())
-		.start(firstChunkStepNew3())
+		.start(firstChunkStepNew4())
 		//.next(secondStep())
 		.build();
+	}
+	
+	private Step firstChunkStepNew4() {
+		return stepBuilderFactory.get("First Chunk Step StudentResponse")
+				.<StudentResponse, StudentResponse>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(itemReaderAdapter())
+				//.processor(firstItemProcessor)
+				.writer(firstItemWriterResponse)
+				.build();
 	}
 	
 	public ItemReaderAdapter<StudentResponse> itemReaderAdapter() {
@@ -129,7 +144,7 @@ public class SampleJob {
 		
 		itemReaderAdapter.setTargetObject(studentService);
 		itemReaderAdapter.setTargetMethod("getStudent");
-		
+		itemReaderAdapter.setArguments(new Object[] {1L, "Ejemplo"});
 		return itemReaderAdapter;
 	}
 	

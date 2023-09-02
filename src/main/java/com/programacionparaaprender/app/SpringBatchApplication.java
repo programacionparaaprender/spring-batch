@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 	 ,"com.programacionparaaprender.processor"
 	 ,"com.programacionparaaprender.writer"
 	 ,"com.programacionparaaprender.controllers"
+	 ,"com.programacionparaaprender.model"
 	 })
 @EnableAsync
 @EnableScheduling

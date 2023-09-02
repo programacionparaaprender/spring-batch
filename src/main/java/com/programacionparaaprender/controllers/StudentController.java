@@ -26,7 +26,7 @@ import com.programacionparaaprender.service.StudentService;
 @RequestMapping("/api/students")
 @CrossOrigin(origins = { "http://localhost:4200" }, maxAge = 3600)
 public class StudentController {
-
+/*
 	@Autowired
 	StudentService studentService;
 	
@@ -44,4 +44,5 @@ public class StudentController {
         ResponseEntity<Mensaje> entity = new ResponseEntity<Mensaje>(msj, status);
         return entity;
     }
+    */
 }

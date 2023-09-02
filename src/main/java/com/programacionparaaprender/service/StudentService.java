@@ -16,10 +16,12 @@ import com.programacionparaaprender.repository.StudentRepository;
 @Service
 @Transactional
 public class StudentService {
-	@Autowired(required = false) 
-	private StudentRepository studentRepository;
+	//@Autowired(required = false) 
+	//private StudentRepository studentRepository;
 
+	List<StudentResponse> list;
     
+	/*
     @Transactional(readOnly = true)
     public Optional<StudentOrm> findById(Long id){
     	return studentRepository.findById(id);
@@ -64,15 +66,27 @@ public class StudentService {
         return studentRepository.existsByEmail(email);
     }
     
-	public List<StudentResponse> restCallToStudents(){
-		List<StudentResponse> response = new LinkedList<StudentResponse>();
+    */
+    
+    public StudentResponse getStudent(long id, String name){
+		System.out.println("id = " + id + " and name = " + name);
+    	if(list == null) {
+    		list = new LinkedList<StudentResponse>();
+    		restCallToStudents();
+    	}
+    	if(!list.isEmpty()) {
+    		return list.remove(0);
+    	}
+		return null;
+    }
+    
+	public void restCallToStudents(){
 		RestTemplate restTemplate = new RestTemplate();
 		StudentResponse[] studentResponseArray;
-		studentResponseArray = restTemplate.getForObject("https://localhost:8081/api/v1/students"
+		studentResponseArray = restTemplate.getForObject("http://localhost:8081/api/v1/students"
 				, StudentResponse[].class);
 		for(StudentResponse sr: studentResponseArray) {
-			response.add(sr);
+			list.add(sr);
 		}
-		return response;
 	}
 }
