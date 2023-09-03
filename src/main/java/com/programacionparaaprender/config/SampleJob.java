@@ -28,6 +28,9 @@ import com.programacionparaaprender.writer.FirstItemWriterXml;
 import org.springframework.context.annotation.Bean;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Date;
 
 import javax.sql.DataSource;
 
@@ -42,9 +45,14 @@ import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
+import org.springframework.batch.item.file.FlatFileFooterCallback;
+import org.springframework.batch.item.file.FlatFileHeaderCallback;
 import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileItemWriter;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
+import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
+import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
 import org.springframework.batch.item.json.JsonItemReader;
@@ -123,10 +131,22 @@ public class SampleJob {
 	public Job secondJob() {
 		return jobBuilderFactory.get("Second Job")
 		.incrementer(new RunIdIncrementer())
-		.start(firstChunkStepNew4())
+		.start(firstChunkStepNew5())
 		//.next(secondStep())
 		.build();
 	}
+	
+	private Step firstChunkStepNew5() {
+		return stepBuilderFactory.get("First Chunk Step")
+				.<StudentJdbc, StudentJdbc>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader())
+				//.processor(firstItemProcessor)
+				.writer(flatFileItemWriter(null))
+				.build();
+	}
+	
+	
 	
 	private Step firstChunkStepNew4() {
 		return stepBuilderFactory.get("First Chunk Step StudentResponse")
@@ -217,8 +237,8 @@ public class SampleJob {
 	
 	
 	
-	@StepScope
-	@Bean
+	//@StepScope
+	//@Bean
 	public JsonItemReader<StudentJson> jsonItemReaderNew(
 			@Value("#{jobParameters['inputFileJson']}") FileSystemResource fileSystemResource) {
 		
@@ -396,6 +416,45 @@ public class SampleJob {
 		return new SecondTasklet(id);
 	}
 
-	
+	@StepScope
+	@Bean
+	public FlatFileItemWriter<StudentJdbc> flatFileItemWriter(
+			@Value("#{jobParameters['outFile']}") FileSystemResource fileSystemResource) {
+		FlatFileItemWriter<StudentJdbc> flatFileItemWriter = 
+				new FlatFileItemWriter<StudentJdbc>();
+		
+		FileSystemResource fileSystemResource1;
+		fileSystemResource1 = new FileSystemResource(
+			new File("outFiles=C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles"));
+		
+		flatFileItemWriter.setResource(fileSystemResource);
+		
+		flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
+			@Override
+			public void writeHeader(Writer writer) throws IOException {
+				writer.write("Id,First Name,Last Name,Email");
+			}
+		});
+		
+		flatFileItemWriter.setLineAggregator(new DelimitedLineAggregator<StudentJdbc>() {
+			{
+				//setDelimiter("|");
+				setFieldExtractor(new BeanWrapperFieldExtractor<StudentJdbc>() {
+					{
+						setNames(new String[] {"id", "firstName", "lastName", "email"});
+					}
+				});
+			}
+		});
+		
+		flatFileItemWriter.setFooterCallback(new FlatFileFooterCallback() {
+			@Override
+			public void writeFooter(Writer writer) throws IOException {
+				writer.write("Created @ " + new Date());
+			}
+		});
+		
+		return flatFileItemWriter;
+	}
 	
 }
