@@ -32,6 +32,8 @@ import org.springframework.context.annotation.Bean;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Date;
 
 import javax.sql.DataSource;
@@ -47,6 +49,7 @@ import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.adapter.ItemReaderAdapter;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.ItemPreparedStatementSetter;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileFooterCallback;
@@ -146,9 +149,44 @@ public class SampleJob {
 	public Job secondJob() {
 		return jobBuilderFactory.get("Second Job")
 		.incrementer(new RunIdIncrementer())
-		.start(firstChunkStepNew9())
+		.start(firstChunkStepNew10())
 		//.next(secondStep())
 		.build();
+	}
+	
+	private Step firstChunkStepNew10() {
+		return stepBuilderFactory.get("First Chunk Step Json")
+				.<StudentCsv, StudentCsv>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(flatFileItemReaderDatabase(null))
+				//.processor(firstItemProcessorXml)
+				.writer(jdbcBatchItemWriter1())
+				.build();
+	}
+	
+	@Bean
+	public JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter1() {
+		JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter = 
+				new JdbcBatchItemWriter<StudentCsv>();
+		
+		jdbcBatchItemWriter.setDataSource(datasource);
+		jdbcBatchItemWriter.setSql(
+				"insert into student2(id, first_name, last_name, email) "
+				+ "values (?,?,?,?)");
+		
+		jdbcBatchItemWriter.setItemPreparedStatementSetter(
+				new ItemPreparedStatementSetter<StudentCsv>() {
+			
+			@Override
+			public void setValues(StudentCsv item, PreparedStatement ps) throws SQLException {
+				ps.setLong(1, item.getId());
+				ps.setString(2, item.getFirstName());
+				ps.setString(3, item.getLastName());
+				ps.setString(4, item.getEmail());
+			}
+		});
+		
+		return jdbcBatchItemWriter;
 	}
 	
 	private Step firstChunkStepNew9() {
