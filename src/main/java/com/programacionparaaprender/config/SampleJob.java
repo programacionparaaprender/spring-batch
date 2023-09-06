@@ -13,6 +13,8 @@ import com.programacionparaaprender.model.StudentJson;
 import com.programacionparaaprender.model.StudentResponse;
 import com.programacionparaaprender.model.StudentXml;
 import com.programacionparaaprender.processor.FirstItemProcessor;
+import com.programacionparaaprender.processor.FirstItemProcessorJson;
+import com.programacionparaaprender.processor.FirstItemProcessorXml;
 import com.programacionparaaprender.reader.FirstItemReader;
 import com.programacionparaaprender.service.FirstJobListener;
 import com.programacionparaaprender.service.FirstStepListener;
@@ -44,6 +46,8 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.item.adapter.ItemReaderAdapter;
+import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
+import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.file.FlatFileFooterCallback;
 import org.springframework.batch.item.file.FlatFileHeaderCallback;
@@ -54,9 +58,12 @@ import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor;
 import org.springframework.batch.item.file.transform.DelimitedLineAggregator;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
+import org.springframework.batch.item.json.JacksonJsonObjectMarshaller;
 import org.springframework.batch.item.json.JacksonJsonObjectReader;
+import org.springframework.batch.item.json.JsonFileItemWriter;
 import org.springframework.batch.item.json.JsonItemReader;
 import org.springframework.batch.item.xml.StaxEventItemReader;
+import org.springframework.batch.item.xml.StaxEventItemWriter;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -112,6 +119,14 @@ public class SampleJob {
 	@Autowired
 	private StudentService studentService;
 	
+	
+	@Autowired
+	private FirstItemProcessorJson firstItemProcessorJson;
+	
+
+	@Autowired
+	private FirstItemProcessorXml firstItemProcessorXml;
+	
 	/*
 	@Bean
 	@ConfigurationProperties(prefix = "spring.datasource")
@@ -131,9 +146,191 @@ public class SampleJob {
 	public Job secondJob() {
 		return jobBuilderFactory.get("Second Job")
 		.incrementer(new RunIdIncrementer())
-		.start(firstChunkStepNew5())
+		.start(firstChunkStepNew9())
 		//.next(secondStep())
 		.build();
+	}
+	
+	private Step firstChunkStepNew9() {
+		return stepBuilderFactory.get("First Chunk Step Json")
+				.<StudentCsv, StudentCsv>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(flatFileItemReaderDatabase(null))
+				//.processor(firstItemProcessorXml)
+				.writer(jdbcBatchItemWriter())
+				.build();
+	}
+	
+	@StepScope
+	@Bean
+	public FlatFileItemReader<StudentCsv> flatFileItemReaderDatabase(
+				@Value("#{jobParameters['inputFile']}") FileSystemResource fileSystemResource) {
+			FlatFileItemReader<StudentCsv> flatFileItemReader = 
+					new FlatFileItemReader<StudentCsv>();
+			
+			flatFileItemReader.setResource(fileSystemResource);
+			
+			flatFileItemReader.setLineMapper(new DefaultLineMapper<StudentCsv>() {
+				{
+					setLineTokenizer(new DelimitedLineTokenizer() {
+						{
+							setNames("ID", "First Name", "Last Name", "Email");
+						}
+					});
+					
+					setFieldSetMapper(new BeanWrapperFieldSetMapper<StudentCsv>() {
+						{
+							setTargetType(StudentCsv.class);
+						}
+					});
+					
+				}
+			});
+			
+			/*
+			DefaultLineMapper<StudentCsv> defaultLineMapper = 
+					new DefaultLineMapper<StudentCsv>();
+			
+			DelimitedLineTokenizer delimitedLineTokenizer = new DelimitedLineTokenizer();
+			delimitedLineTokenizer.setNames("ID", "First Name", "Last Name", "Email");
+			
+			defaultLineMapper.setLineTokenizer(delimitedLineTokenizer);
+			
+			BeanWrapperFieldSetMapper<StudentCsv> fieldSetMapper = 
+					new BeanWrapperFieldSetMapper<StudentCsv>();
+			fieldSetMapper.setTargetType(StudentCsv.class);
+			
+			defaultLineMapper.setFieldSetMapper(fieldSetMapper);
+			
+			flatFileItemReader.setLineMapper(defaultLineMapper);
+			*/
+			
+			flatFileItemReader.setLinesToSkip(1);
+			
+			return flatFileItemReader;
+	}
+	
+	
+	@Bean
+	public JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter() {
+		JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter = 
+				new JdbcBatchItemWriter<StudentCsv>();
+		
+		jdbcBatchItemWriter.setDataSource(datasource);
+		jdbcBatchItemWriter.setSql(
+				"insert into student2(id, first_name, last_name, email) "
+				+ "values (:id, :firstName, :lastName, :email)");
+		
+		jdbcBatchItemWriter.setItemSqlParameterSourceProvider(
+				new BeanPropertyItemSqlParameterSourceProvider<StudentCsv>());
+		
+		return jdbcBatchItemWriter;
+	}
+	
+	private Step firstChunkStepNew8() {
+		return stepBuilderFactory.get("First Chunk Step Json")
+				.<StudentJdbc, StudentXml>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader())
+				.processor(firstItemProcessorXml)
+				.writer(staxEventItemWriter(null))
+				.build();
+	}
+	
+	@StepScope
+	@Bean
+	public StaxEventItemWriter<StudentXml> staxEventItemWriter(
+			@Value("#{jobParameters['outFiles']}") FileSystemResource fileSystemResource) {
+		String fileName = fileSystemResource.getPath();
+		File myFile = new File(fileName);
+	    
+		if(!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+		}
+		StaxEventItemWriter<StudentXml> staxEventItemWriter = 
+				new StaxEventItemWriter<StudentXml>();
+		
+		staxEventItemWriter.setResource(fileSystemResource);
+		staxEventItemWriter.setRootTagName("students");
+		
+		staxEventItemWriter.setMarshaller(new Jaxb2Marshaller() {
+			{
+				setClassesToBeBound(StudentXml.class);
+			}
+		});
+		
+		return staxEventItemWriter;
+	}
+	
+	private Step firstChunkStepNew7() {
+		return stepBuilderFactory.get("First Chunk Step Json")
+				.<StudentJdbc, StudentJson>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader())
+				.processor(firstItemProcessorJson)
+				.writer(jsonFileItemWriterJson(null))
+				.build();
+	}
+	
+	private Step firstChunkStepNew6() {
+		return stepBuilderFactory.get("First Chunk Step")
+				.<StudentJdbc, StudentJdbc>chunk(3)
+				//.reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader())
+				//.processor(firstItemProcessor)
+				.writer(jsonFileItemWriterJdbc(null))
+				.build();
+	}
+	
+	@StepScope
+	@Bean
+	public JsonFileItemWriter<StudentJson> jsonFileItemWriterJson(
+			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
+		String fileName = fileSystemResource.getPath();
+		File myFile = new File(fileName);
+	    
+		if(!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+		}
+		
+		JsonFileItemWriter<StudentJson> jsonFileItemWriter = 
+				new JsonFileItemWriter<>(fileSystemResource, 
+						new JacksonJsonObjectMarshaller<StudentJson>());
+		
+		return jsonFileItemWriter;
+	}
+	
+	@StepScope
+	@Bean
+	public JsonFileItemWriter<StudentJdbc> jsonFileItemWriterJdbc(
+			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
+		String fileName = fileSystemResource.getPath();
+		File myFile = new File(fileName);
+	    
+		if(!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+		}
+		
+		JsonFileItemWriter<StudentJdbc> jsonFileItemWriter = 
+				new JsonFileItemWriter<>(fileSystemResource, 
+						new JacksonJsonObjectMarshaller<StudentJdbc>());
+		
+		return jsonFileItemWriter;
 	}
 	
 	private Step firstChunkStepNew5() {
@@ -144,6 +341,84 @@ public class SampleJob {
 				//.processor(firstItemProcessor)
 				.writer(flatFileItemWriter(null))
 				.build();
+	}
+	
+	public JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader() {
+		JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader = 
+				new JdbcCursorItemReader<StudentJdbc>();
+		
+		jdbcCursorItemReader.setDataSource(datasource);
+		jdbcCursorItemReader.setSql(
+				"select id, first_name as firstName, last_name as lastName,"
+				+ "email from student");
+		
+		jdbcCursorItemReader.setRowMapper(new BeanPropertyRowMapper<StudentJdbc>() {
+			{
+				setMappedClass(StudentJdbc.class);
+			}
+		});
+		jdbcCursorItemReader.setCurrentItemCount(2);
+		jdbcCursorItemReader.setMaxItemCount(8);
+		
+		return jdbcCursorItemReader;
+	}
+	
+	@StepScope
+	@Bean
+	public FlatFileItemWriter<StudentJdbc> flatFileItemWriter(
+			@Value("#{jobParameters['outFiles']}") FileSystemResource fileSystemResource) {
+		FlatFileItemWriter<StudentJdbc> flatFileItemWriter = 
+				new FlatFileItemWriter<StudentJdbc>();
+		
+		FileSystemResource fileSystemResource1;
+		fileSystemResource1 = new FileSystemResource(
+			new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.csv"));
+		FileSystemResource fileSystemResource2;
+		fileSystemResource2 = new FileSystemResource(
+			new File("/c/Users/luis1/Documents/htdocs/telefonica/spring-batch/outFiles"));
+		
+		//flatFileItemReader.setResource(new FileSystemResource(
+				//		new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\inputFiles\\students.csv")));
+		
+		String fileName = fileSystemResource.getPath();
+	    File myFile = new File(fileName);
+	    
+		if(!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}	
+		}
+		flatFileItemWriter.setResource(fileSystemResource);
+		
+		flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
+			@Override
+			public void writeHeader(Writer writer) throws IOException {
+				writer.write("Id,First Name,Last Name,Email");
+			}
+		});
+		
+		flatFileItemWriter.setLineAggregator(new DelimitedLineAggregator<StudentJdbc>() {
+			{
+				//setDelimiter("|");
+				setFieldExtractor(new BeanWrapperFieldExtractor<StudentJdbc>() {
+					{
+						setNames(new String[] {"id", "firstName", "lastName", "email"});
+					}
+				});
+			}
+		});
+		
+		flatFileItemWriter.setFooterCallback(new FlatFileFooterCallback() {
+			@Override
+			public void writeFooter(Writer writer) throws IOException {
+				writer.write("Created @ " + new Date());
+			}
+		});
+		
+		return flatFileItemWriter;
 	}
 	
 	
@@ -179,25 +454,7 @@ public class SampleJob {
 	}
 	
 	
-	public JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader() {
-		JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader = 
-				new JdbcCursorItemReader<StudentJdbc>();
-		
-		jdbcCursorItemReader.setDataSource(datasource);
-		jdbcCursorItemReader.setSql(
-				"select id, first_name as firstName, last_name as lastName,"
-				+ "email from student");
-		
-		jdbcCursorItemReader.setRowMapper(new BeanPropertyRowMapper<StudentJdbc>() {
-			{
-				setMappedClass(StudentJdbc.class);
-			}
-		});
-		jdbcCursorItemReader.setCurrentItemCount(2);
-		jdbcCursorItemReader.setMaxItemCount(8);
-		
-		return jdbcCursorItemReader;
-	}
+	
 	
 	private Step firstChunkStepNew2() {
 		return stepBuilderFactory.get("First Chunk Step")
@@ -416,45 +673,6 @@ public class SampleJob {
 		return new SecondTasklet(id);
 	}
 
-	@StepScope
-	@Bean
-	public FlatFileItemWriter<StudentJdbc> flatFileItemWriter(
-			@Value("#{jobParameters['outFile']}") FileSystemResource fileSystemResource) {
-		FlatFileItemWriter<StudentJdbc> flatFileItemWriter = 
-				new FlatFileItemWriter<StudentJdbc>();
-		
-		FileSystemResource fileSystemResource1;
-		fileSystemResource1 = new FileSystemResource(
-			new File("outFiles=C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles"));
-		
-		flatFileItemWriter.setResource(fileSystemResource);
-		
-		flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
-			@Override
-			public void writeHeader(Writer writer) throws IOException {
-				writer.write("Id,First Name,Last Name,Email");
-			}
-		});
-		
-		flatFileItemWriter.setLineAggregator(new DelimitedLineAggregator<StudentJdbc>() {
-			{
-				//setDelimiter("|");
-				setFieldExtractor(new BeanWrapperFieldExtractor<StudentJdbc>() {
-					{
-						setNames(new String[] {"id", "firstName", "lastName", "email"});
-					}
-				});
-			}
-		});
-		
-		flatFileItemWriter.setFooterCallback(new FlatFileFooterCallback() {
-			@Override
-			public void writeFooter(Writer writer) throws IOException {
-				writer.write("Created @ " + new Date());
-			}
-		});
-		
-		return flatFileItemWriter;
-	}
+	
 	
 }

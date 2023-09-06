@@ -3,7 +3,7 @@ package com.programacionparaaprender.model;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+//import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.Data;
 
@@ -14,9 +14,8 @@ public class StudentXml {
 	private String firstName;
 	private String lastName;
 	private String email;
-	
-	@XmlElement(name = "f_n")
-	public String getFirstName() {
-		return firstName;
-	}
+	//@XmlElement(name = "f_n")
+	//public String getFirstName() {
+	//	return firstName;
+	//}
 }
