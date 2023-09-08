@@ -146,8 +146,37 @@ public class SampleJob {
 	*/
 	
 	@Bean
+	public Job mysqlToXmlJob() {
+		//mysqlToXmlJob
+		return jobBuilderFactory.get("mysqlToXmlJob")
+		.incrementer(new RunIdIncrementer())
+		.start(stepMysqlToXml())
+		//.next(secondStep())
+		.build();
+	}
+	
+	@Bean
+	public Job mysqlToJsonJob() {
+		return jobBuilderFactory.get("Job mysql a json")
+		.incrementer(new RunIdIncrementer())
+		.start(stepMysqlToJson())
+		//.next(secondStep())
+		.build();
+	}
+	
+	@Bean
+	public Job mysqlToCsvJob() {
+		return jobBuilderFactory.get("Job mysql a csv")
+		.incrementer(new RunIdIncrementer())
+		.start(StepMysqlToCsv())
+		//.next(secondStep())
+		.build();
+	}
+	
+	@Bean
 	public Job secondJob() {
-		return jobBuilderFactory.get("Second Job")
+		//csvToMysqlJob
+		return jobBuilderFactory.get("secondJob")
 		.incrementer(new RunIdIncrementer())
 		.start(firstChunkStepNew10())
 		//.next(secondStep())
@@ -265,7 +294,7 @@ public class SampleJob {
 		return jdbcBatchItemWriter;
 	}
 	
-	private Step firstChunkStepNew8() {
+	private Step stepMysqlToXml() {
 		return stepBuilderFactory.get("First Chunk Step Json")
 				.<StudentJdbc, StudentXml>chunk(3)
 				//.reader(flatFileItemReader(null))
@@ -279,7 +308,8 @@ public class SampleJob {
 	@Bean
 	public StaxEventItemWriter<StudentXml> staxEventItemWriter(
 			@Value("#{jobParameters['outFiles']}") FileSystemResource fileSystemResource) {
-		String fileName = fileSystemResource.getPath();
+		//String fileName = fileSystemResource.getPath();
+		String fileName = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.xml";
 		File myFile = new File(fileName);
 	    
 		if(!myFile.exists()) {
@@ -292,8 +322,9 @@ public class SampleJob {
 		}
 		StaxEventItemWriter<StudentXml> staxEventItemWriter = 
 				new StaxEventItemWriter<StudentXml>();
-		
-		staxEventItemWriter.setResource(fileSystemResource);
+		FileSystemResource fileSystemResource1 = new FileSystemResource(
+				new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.xml"));
+		staxEventItemWriter.setResource(fileSystemResource1);
 		staxEventItemWriter.setRootTagName("students");
 		
 		staxEventItemWriter.setMarshaller(new Jaxb2Marshaller() {
@@ -305,7 +336,7 @@ public class SampleJob {
 		return staxEventItemWriter;
 	}
 	
-	private Step firstChunkStepNew7() {
+	private Step stepMysqlToJson() {
 		return stepBuilderFactory.get("First Chunk Step Json")
 				.<StudentJdbc, StudentJson>chunk(3)
 				//.reader(flatFileItemReader(null))
@@ -329,7 +360,8 @@ public class SampleJob {
 	@Bean
 	public JsonFileItemWriter<StudentJson> jsonFileItemWriterJson(
 			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
-		String fileName = fileSystemResource.getPath();
+		//String fileName = fileSystemResource.getPath();
+		String fileName = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.json";
 		File myFile = new File(fileName);
 	    
 		if(!myFile.exists()) {
@@ -340,9 +372,10 @@ public class SampleJob {
 				e.printStackTrace();
 			}	
 		}
-		
+		FileSystemResource fileSystemResource1 = new FileSystemResource(
+				new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.json"));
 		JsonFileItemWriter<StudentJson> jsonFileItemWriter = 
-				new JsonFileItemWriter<>(fileSystemResource, 
+				new JsonFileItemWriter<>(fileSystemResource1, 
 						new JacksonJsonObjectMarshaller<StudentJson>());
 		
 		return jsonFileItemWriter;
@@ -371,7 +404,7 @@ public class SampleJob {
 		return jsonFileItemWriter;
 	}
 	
-	private Step firstChunkStepNew5() {
+	private Step StepMysqlToCsv() {
 		return stepBuilderFactory.get("First Chunk Step")
 				.<StudentJdbc, StudentJdbc>chunk(3)
 				//.reader(flatFileItemReader(null))
@@ -408,17 +441,8 @@ public class SampleJob {
 		FlatFileItemWriter<StudentJdbc> flatFileItemWriter = 
 				new FlatFileItemWriter<StudentJdbc>();
 		
-		FileSystemResource fileSystemResource1;
-		fileSystemResource1 = new FileSystemResource(
-			new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.csv"));
-		FileSystemResource fileSystemResource2;
-		fileSystemResource2 = new FileSystemResource(
-			new File("/c/Users/luis1/Documents/htdocs/telefonica/spring-batch/outFiles"));
-		
-		//flatFileItemReader.setResource(new FileSystemResource(
-				//		new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\inputFiles\\students.csv")));
-		
-		String fileName = fileSystemResource.getPath();
+		//String fileName = fileSystemResource.getPath();
+		String fileName = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.csv";
 	    File myFile = new File(fileName);
 	    
 		if(!myFile.exists()) {
@@ -429,7 +453,9 @@ public class SampleJob {
 				e.printStackTrace();
 			}	
 		}
-		flatFileItemWriter.setResource(fileSystemResource);
+		FileSystemResource fileSystemResource1 = new FileSystemResource(
+				new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.csv"));
+		flatFileItemWriter.setResource(fileSystemResource1);
 		
 		flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
 			@Override
