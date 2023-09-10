@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import com.programacionparaaprender.model.StudentCsv;
 import com.programacionparaaprender.model.StudentOrm;
 import com.programacionparaaprender.model.StudentResponse;
 import com.programacionparaaprender.repository.StudentRepository;
@@ -88,5 +89,12 @@ public class StudentService {
 		for(StudentResponse sr: studentResponseArray) {
 			list.add(sr);
 		}
+	}
+	public StudentResponse restCallToCreateStudent(StudentCsv studentCsv) {
+		RestTemplate restTemplate = new RestTemplate();
+		String url = "http://localhost:8081/api/v1/createStudent";
+		StudentResponse response;
+		response = restTemplate.postForObject(url, studentCsv, StudentResponse.class);
+		return response;
 	}
 }
