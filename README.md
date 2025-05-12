@@ -11,4 +11,10 @@
 >- inputFileXml=C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\inputFiles\\students.xml
 
 ### pendiente corregir error java.lang.IllegalArgumentException: jdbcUrl is required with driverClassName.
+<<<<<<< HEAD
 >- https://stackoverflow.com/questions/56100898/jdbcurl-is-required-with-driverclassname
+=======
+>- https://stackoverflow.com/questions/56100898/jdbcurl-is-required-with-driverclassname
+
+### al agregar un nuevo job una vez colocar base de datos en create
+>>>>>>> 24f394d014ec9ee5437dd9cbeb615bd2821d6524

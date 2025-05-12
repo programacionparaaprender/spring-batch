@@ -39,6 +39,7 @@ import java.io.Writer;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -148,8 +149,13 @@ public class SampleJob {
 	@Autowired
 	private SkipListenerImpl skipListenerImpl;
 	
+<<<<<<< HEAD
 	private String base = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\";
 	private String baseinput = "C:/Users/luis1/Documents/htdocs/telefonica/spring-batch/inputFile/";
+=======
+	private String base = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch-1\\outFiles\\";
+	private String baseinput = "C:/Users/luis1/Documents/htdocs/telefonica/spring-batch-1/inputFiles/";
+>>>>>>> 24f394d014ec9ee5437dd9cbeb615bd2821d6524
 	
 	/*
 	 * @Bean
@@ -215,6 +221,7 @@ public class SampleJob {
 				.build();
 	}
 	
+<<<<<<< HEAD
 	
 	private Step csvToJsonStep() {
 		return stepBuilderFactory.get("First Chunk nuevo Step1").<StudentCsv, StudentJson>chunk(3)
@@ -308,6 +315,267 @@ public class SampleJob {
 		return flatFileItemReader;
 	}
 	
+	@StepScope
+	@Bean
+	public JsonFileItemWriter<StudentJson> jsonFileItemWriterCsvToJson(
+			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
+		// String fileName = fileSystemResource.getPath();
+		String fileName = base + "students_csv.json";
+		File myFile = new File(fileName);
+
+		if (!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
+		JsonFileItemWriter<StudentJson> jsonFileItemWriter = new JsonFileItemWriter<>(fileSystemResource1,
+				new JacksonJsonObjectMarshaller<StudentJson>());
+
+		return jsonFileItemWriter;
+=======
+	@Bean
+	public Job chunkJob1() {
+		return jobBuilderFactory.get("Chunk Job1").incrementer(new RunIdIncrementer())
+				// .start(firstChunkStepNew10())
+				.start(firstChunkStep4())
+				//.start(firstChunkStep1())
+				//.next(firstChunkStep2())
+				//.next(firstChunkStep3())	
+				// .next(secondStep())
+				.build();
+	}
+	
+	
+	private Step csvToJsonStep() {
+		return stepBuilderFactory.get("First Chunk nuevo Step1").<StudentCsv, StudentJson>chunk(3)
+				.reader(flatFileItemReader(null))
+				.processor(firstItemProcessorChunk)
+				.writer(jsonFileItemWriterCsvToJson(null))
+				//.faultTolerant()
+				//.skip(Throwable.class)
+				// .skip(NullPointerException.class)
+				//.skipLimit(Integer.MAX_VALUE)
+				//.skipLimit(100)
+				//.skipPolicy(new AlwaysSkipItemSkipPolicy())
+				//.retryLimit(3)
+				//.retry(Throwable.class)
+				//.listener(skipListener)
+				//.listener(skipListenerImpl)
+				.build();
+	}
+	
+	private Step StepMysqlToCsv() {
+		return stepBuilderFactory.get("First Chunk Step").<StudentJdbc, StudentJdbc>chunk(3)
+				// .reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader())
+				// .processor(firstItemProcessor)
+				.writer(flatFileItemWriter(null)).build();
+	}
+	
+	private Step stepMysqlToJson() {
+		return stepBuilderFactory.get("First Chunk Step Json").<StudentJdbc, StudentJson>chunk(3)
+				// .reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader()).processor(firstItemProcessorJson).writer(jsonFileItemWriterJson(null))
+				.build();
+	}
+	
+	private Step stepMysqlToXml() {
+		return stepBuilderFactory.get("First Chunk Step Json").<StudentJdbc, StudentXml>chunk(3)
+				// .reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader()).processor(firstItemProcessorXml).writer(staxEventItemWriter(null))
+				.build();
+	}
+	
+	
+	
+	private Step firstChunkStep4() {
+		return stepBuilderFactory.get("First Chunk Step1").<StudentCsv, StudentJson>chunk(3)
+				.reader(flatFileItemReaderError(null))
+				.processor(firstItemProcessorChunkError)
+				.writer(jsonFileItemWriterJsonError(null))
+				.faultTolerant()
+				.skip(Throwable.class)
+				// .skip(NullPointerException.class)
+				// .skipLimit(Integer.MAX_VALUE)
+				.skipPolicy(new AlwaysSkipItemSkipPolicy())
+				//.listener(skipListener)
+				//.listener(skipListenerImpl)
+				.build();
+>>>>>>> 24f394d014ec9ee5437dd9cbeb615bd2821d6524
+	}
+	
+	@StepScope
+	@Bean
+	public JsonFileItemWriter<StudentJson> jsonFileItemWriterJsonError(
+			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
+		// String fileName = fileSystemResource.getPath();
+<<<<<<< HEAD
+		String fileName = base + "students.csv";
+=======
+		String fileName = base + "students.json";
+>>>>>>> 24f394d014ec9ee5437dd9cbeb615bd2821d6524
+		File myFile = new File(fileName);
+
+		if (!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+<<<<<<< HEAD
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
+		flatFileItemWriter.setResource(fileSystemResource1);
+
+		flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
+=======
+		FileSystemResource fileSystemResource1;
+		fileSystemResource1 = new FileSystemResource(
+				new File(fileName));
+		JsonFileItemWriter<StudentJson> jsonFileItemWriter = 
+				new JsonFileItemWriter<StudentJson>(fileSystemResource1, 
+						new JacksonJsonObjectMarshaller<StudentJson>()) {
+>>>>>>> 24f394d014ec9ee5437dd9cbeb615bd2821d6524
+			@Override
+			public String doWrite(List<? extends StudentJson> items) {
+				items.stream().forEach(item -> {
+					if(item.getId() == 3 || item.getId() == 5) {
+						throw new NullPointerException();
+					}
+				});
+				return super.doWrite(items);
+			}
+		};
+
+		return jsonFileItemWriter;
+	}
+	
+	@StepScope
+	@Bean
+<<<<<<< HEAD
+	public StaxEventItemWriter<StudentXml> staxEventItemWriter(
+			@Value("#{jobParameters['outFiles']}") FileSystemResource fileSystemResource) {
+		// String fileName = fileSystemResource.getPath();
+		String fileName = base + "students.xml";
+		File myFile = new File(fileName);
+
+		if (!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		StaxEventItemWriter<StudentXml> staxEventItemWriter = new StaxEventItemWriter<StudentXml>();
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
+		staxEventItemWriter.setResource(fileSystemResource1);
+		staxEventItemWriter.setRootTagName("students");
+
+		staxEventItemWriter.setMarshaller(new Jaxb2Marshaller() {
+			{
+				setClassesToBeBound(StudentXml.class);
+			}
+		});
+
+		return staxEventItemWriter;
+	}
+
+	private Step stepCreateJsonError() {
+		return stepBuilderFactory.get("First Chunk Step Json").<StudentJdbc, StudentJson>chunk(3)
+				// .reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader()).processor(firstItemProcessorJson).writer(jsonFileItemWriterJson(null))
+				.faultTolerant().skip(FlatFileParseException.class).skip(NullPointerException.class)
+				// .skipLimit(Integer.MAX_VALUE)
+				.skipPolicy(new AlwaysSkipItemSkipPolicy()).build();
+	}
+
+	public JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader() {
+		JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader = new JdbcCursorItemReader<StudentJdbc>();
+
+		jdbcCursorItemReader.setDataSource(datasource);
+		jdbcCursorItemReader
+				.setSql("select id, first_name as firstName, last_name as lastName," + "email from student");
+
+		jdbcCursorItemReader.setRowMapper(new BeanPropertyRowMapper<StudentJdbc>() {
+=======
+	public FlatFileItemReader<StudentCsv> flatFileItemReaderError(
+			@Value("#{jobParameters['inputFile']}") FileSystemResource fileSystemResource) {
+		FlatFileItemReader<StudentCsv> flatFileItemReader = new FlatFileItemReader<StudentCsv>();
+
+		FileSystemResource fileSystemResource1 = new FileSystemResource(
+				new File(baseinput + "student_error.csv"));
+		
+		flatFileItemReader.setResource(fileSystemResource1);
+
+		flatFileItemReader.setLineMapper(new DefaultLineMapper<StudentCsv>() {
+>>>>>>> 24f394d014ec9ee5437dd9cbeb615bd2821d6524
+			{
+				setMappedClass(StudentJdbc.class);
+			}
+		});
+		jdbcCursorItemReader.setCurrentItemCount(2);
+		jdbcCursorItemReader.setMaxItemCount(8);
+
+		return jdbcCursorItemReader;
+	}
+	
+	@StepScope
+	@Bean
+<<<<<<< HEAD
+	public JsonFileItemWriter<StudentJson> jsonFileItemWriterJson(
+			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
+		// String fileName = fileSystemResource.getPath();
+		String fileName = base + "students.json";
+		File myFile = new File(fileName);
+=======
+	public FlatFileItemReader<StudentCsv> flatFileItemReader(
+			@Value("#{jobParameters['inputFile']}") FileSystemResource fileSystemResource) {
+		FlatFileItemReader<StudentCsv> flatFileItemReader = new FlatFileItemReader<StudentCsv>();
+
+		// String fileName = fileSystemResource.getPath();
+		String fileName = baseinput + "students.csv";
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
+		
+		flatFileItemReader.setResource(fileSystemResource);
+
+		flatFileItemReader.setLineMapper(new DefaultLineMapper<StudentCsv>() {
+			{
+				setLineTokenizer(new DelimitedLineTokenizer() {
+					{
+						setNames("ID", "First Name", "Last Name", "Email");
+					}
+				});
+
+				setFieldSetMapper(new BeanWrapperFieldSetMapper<StudentCsv>() {
+					{
+						setTargetType(StudentCsv.class);
+					}
+				});
+>>>>>>> 24f394d014ec9ee5437dd9cbeb615bd2821d6524
+
+		if (!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
+		JsonFileItemWriter<StudentJson> jsonFileItemWriter = new JsonFileItemWriter<>(fileSystemResource1,
+				new JacksonJsonObjectMarshaller<StudentJson>());
+
+		return jsonFileItemWriter;
+	}
+	
+<<<<<<< HEAD
+=======
 	@StepScope
 	@Bean
 	public JsonFileItemWriter<StudentJson> jsonFileItemWriterCsvToJson(
@@ -460,6 +728,7 @@ public class SampleJob {
 		return jsonFileItemWriter;
 	}
 	
+>>>>>>> 24f394d014ec9ee5437dd9cbeb615bd2821d6524
 	private Step firstStep() {
 		return stepBuilderFactory.get("First step").tasklet(firstTasklet()).listener(firstStepListener).build();
 	}

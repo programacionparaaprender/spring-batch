@@ -9,11 +9,11 @@
 		<version>2.3.12.RELEASE</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.programacionparaaprender.app</groupId>
-	<artifactId>spring-batch</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>spring-batch</name>
-	<description>Spring batch</description>
+	<groupId>com.programacionparaaprender.app.example</groupId>
+	<artifactId>spring-batch-1</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+	<name>spring-batch-1</name>
+	<description>Proyecto java para trabajar batch</description>
 	<properties>
 		<java.version>1.8</java.version>
 	</properties>
