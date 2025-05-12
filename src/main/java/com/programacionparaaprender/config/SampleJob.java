@@ -8,6 +8,7 @@ import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
 import com.programacionparaaprender.app.SpringBatchApplication;
 import com.programacionparaaprender.listener.SkipListener;
+import com.programacionparaaprender.listener.SkipListenerImpl;
 import com.programacionparaaprender.model.StudentCsv;
 import com.programacionparaaprender.model.StudentJdbc;
 import com.programacionparaaprender.model.StudentJson;
@@ -82,6 +83,7 @@ import org.springframework.boot.jdbc.DataSourceBuilder;
 @Configuration
 public class SampleJob {
 
+
 	@Autowired
 	private JobBuilderFactory jobBuilderFactory;
 
@@ -142,6 +144,13 @@ public class SampleJob {
 	@Autowired
 	private SkipListener skipListener;
 
+
+	@Autowired
+	private SkipListenerImpl skipListenerImpl;
+	
+	private String base = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\";
+	private String baseinput = "C:/Users/luis1/Documents/htdocs/telefonica/spring-batch/inputFile/";
+	
 	/*
 	 * @Bean
 	 * 
@@ -178,54 +187,14 @@ public class SampleJob {
 				// .next(secondStep())
 				.build();
 	}
-
-	/*
-	 * @Bean public Job csvToMysqlJob() { //csvToMysqlJob return
-	 * jobBuilderFactory.get("csvToMysqlJob") .incrementer(new RunIdIncrementer())
-	 * .start(firstChunkStepNew10()) //.start(stepCreateApiRest())
-	 * //.next(secondStep()) .build(); }
-	 * 
-	 * @Bean public Job apiRestCreateJob() { return
-	 * jobBuilderFactory.get("apiRestCreateJob") .incrementer(new
-	 * RunIdIncrementer()) //.start(firstChunkStepNew10())
-	 * .start(stepCreateApiRest()) //.next(secondStep()) .build(); }
-	 */
-
+	
+	
 	@Bean
-	public Job chunkJob1() {
-		return jobBuilderFactory.get("Chunk Job1").incrementer(new RunIdIncrementer())
-				// .start(firstChunkStepNew10())
-				//.start(firstChunkStep1())
-				.start(firstChunkStep2())
-				// .next(secondStep())
-				.build();
-	}
-
-	private Step firstChunkStep2() {
-		return stepBuilderFactory.get("First Chunk Step1").<StudentCsv, StudentJson>chunk(3)
-				.reader(flatFileItemReader(null))
-				.processor(firstItemProcessorChunkError)
-				.writer(firstItemWriterJson)
-				.faultTolerant()
-				.skip(Throwable.class)
-				// .skip(NullPointerException.class)
-				// .skipLimit(Integer.MAX_VALUE)
-				.skipPolicy(new AlwaysSkipItemSkipPolicy())
-				.listener(skipListener).build();
+	public Job firstJob() {
+		return jobBuilderFactory.get("First Job").incrementer(new RunIdIncrementer()).start(firstStep())
+				.next(secondStep()).listener(firstJobListener).build();
 	}
 	
-	private Step firstChunkStep1() {
-		return stepBuilderFactory.get("First Chunk Step1").<StudentCsv, StudentJson>chunk(3)
-				.reader(flatFileItemReaderError(null))
-				.processor(firstItemProcessorChunk)
-				.writer(firstItemWriterJson)
-				.faultTolerant().skip(Throwable.class)
-				// .skip(NullPointerException.class)
-				// .skipLimit(Integer.MAX_VALUE)
-				.skipPolicy(new AlwaysSkipItemSkipPolicy())
-				.listener(skipListener).build();
-	}
-
 	@Bean
 	public Job secondJob() {
 		return jobBuilderFactory.get("secondJob").incrementer(new RunIdIncrementer())
@@ -234,80 +203,69 @@ public class SampleJob {
 				// .next(secondStep())
 				.build();
 	}
-
-	private Step stepCreateJsonError() {
+	
+	
+	@Bean
+	public Job csvToJsonJob() {
+		return jobBuilderFactory
+				.get("Job csv a json")
+				.incrementer(new RunIdIncrementer())
+				.start(csvToJsonStep())
+				// .next(secondStep())
+				.build();
+	}
+	
+	
+	private Step csvToJsonStep() {
+		return stepBuilderFactory.get("First Chunk nuevo Step1").<StudentCsv, StudentJson>chunk(3)
+				.reader(flatFileItemReader(null))
+				.processor(firstItemProcessorChunk)
+				.writer(jsonFileItemWriterCsvToJson(null))
+				//.faultTolerant()
+				//.skip(Throwable.class)
+				// .skip(NullPointerException.class)
+				//.skipLimit(Integer.MAX_VALUE)
+				//.skipLimit(100)
+				//.skipPolicy(new AlwaysSkipItemSkipPolicy())
+				//.retryLimit(3)
+				//.retry(Throwable.class)
+				//.listener(skipListener)
+				//.listener(skipListenerImpl)
+				.build();
+	}
+	
+	private Step StepMysqlToCsv() {
+		return stepBuilderFactory.get("First Chunk Step").<StudentJdbc, StudentJdbc>chunk(3)
+				// .reader(flatFileItemReader(null))
+				.reader(jdbcCursorItemReader())
+				// .processor(firstItemProcessor)
+				.writer(flatFileItemWriter(null)).build();
+	}
+	
+	private Step stepMysqlToJson() {
 		return stepBuilderFactory.get("First Chunk Step Json").<StudentJdbc, StudentJson>chunk(3)
 				// .reader(flatFileItemReader(null))
 				.reader(jdbcCursorItemReader()).processor(firstItemProcessorJson).writer(jsonFileItemWriterJson(null))
-				.faultTolerant().skip(FlatFileParseException.class).skip(NullPointerException.class)
-				// .skipLimit(Integer.MAX_VALUE)
-				.skipPolicy(new AlwaysSkipItemSkipPolicy()).build();
+				.build();
 	}
-
-	private Step stepCreateApiRest() {
-		return stepBuilderFactory.get("First Chunk Step Json").<StudentCsv, StudentCsv>chunk(3)
+	
+	private Step stepMysqlToXml() {
+		return stepBuilderFactory.get("First Chunk Step Json").<StudentJdbc, StudentXml>chunk(3)
 				// .reader(flatFileItemReader(null))
-				.reader(flatFileItemReaderDatabase(null))
-				// .processor(firstItemProcessorXml)
-				.writer(itemWriterAdapter()).build();
+				.reader(jdbcCursorItemReader()).processor(firstItemProcessorXml).writer(staxEventItemWriter(null))
+				.build();
 	}
-
-	private ItemWriterAdapter<StudentCsv> itemWriterAdapter() {
-		ItemWriterAdapter<StudentCsv> itemReaderAdapter = new ItemWriterAdapter<StudentCsv>();
-		itemReaderAdapter.setTargetObject(studentService);
-		itemReaderAdapter.setTargetMethod("restCallToCreateStudent");
-		// StudentCsv student = new StudentCsv();
-		// student.setId(1L);
-		// student.setFirstName("primer nombre 1");
-		// student.setLastName("segundo nombre 2");
-		// student.setEmail("email1");
-		// itemReaderAdapter.setArguments(student);
-		return itemReaderAdapter;
-	}
-
-	private Step firstChunkStepNew10() {
-		return stepBuilderFactory.get("First Chunk Step Json").<StudentCsv, StudentCsv>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(flatFileItemReaderDatabase(null))
-				// .processor(firstItemProcessorXml)
-				.writer(jdbcBatchItemWriter1()).build();
-	}
-
-	@Bean
-	public JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter1() {
-		JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter = new JdbcBatchItemWriter<StudentCsv>();
-
-		jdbcBatchItemWriter.setDataSource(datasource);
-		jdbcBatchItemWriter.setSql("insert into student2(id, first_name, last_name, email) " + "values (?,?,?,?)");
-
-		jdbcBatchItemWriter.setItemPreparedStatementSetter(new ItemPreparedStatementSetter<StudentCsv>() {
-
-			@Override
-			public void setValues(StudentCsv item, PreparedStatement ps) throws SQLException {
-				ps.setLong(1, item.getId());
-				ps.setString(2, item.getFirstName());
-				ps.setString(3, item.getLastName());
-				ps.setString(4, item.getEmail());
-			}
-		});
-
-		return jdbcBatchItemWriter;
-	}
-
-	private Step firstChunkStepNew9() {
-		return stepBuilderFactory.get("First Chunk Step Json").<StudentCsv, StudentCsv>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(flatFileItemReaderDatabase(null))
-				// .processor(firstItemProcessorXml)
-				.writer(jdbcBatchItemWriter()).build();
-	}
-
+	
 	@StepScope
 	@Bean
-	public FlatFileItemReader<StudentCsv> flatFileItemReaderDatabase(
+	public FlatFileItemReader<StudentCsv> flatFileItemReader(
 			@Value("#{jobParameters['inputFile']}") FileSystemResource fileSystemResource) {
 		FlatFileItemReader<StudentCsv> flatFileItemReader = new FlatFileItemReader<StudentCsv>();
 
+		// String fileName = fileSystemResource.getPath();
+		String fileName = baseinput + "students.csv";
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
+		
 		flatFileItemReader.setResource(fileSystemResource);
 
 		flatFileItemReader.setLineMapper(new DefaultLineMapper<StudentCsv>() {
@@ -349,80 +307,13 @@ public class SampleJob {
 
 		return flatFileItemReader;
 	}
-
-	@Bean
-	public JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter() {
-		JdbcBatchItemWriter<StudentCsv> jdbcBatchItemWriter = new JdbcBatchItemWriter<StudentCsv>();
-
-		jdbcBatchItemWriter.setDataSource(datasource);
-		jdbcBatchItemWriter.setSql("insert into student2(id, first_name, last_name, email) "
-				+ "values (:id, :firstName, :lastName, :email)");
-
-		jdbcBatchItemWriter
-				.setItemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<StudentCsv>());
-
-		return jdbcBatchItemWriter;
-	}
-
-	private Step stepMysqlToXml() {
-		return stepBuilderFactory.get("First Chunk Step Json").<StudentJdbc, StudentXml>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(jdbcCursorItemReader()).processor(firstItemProcessorXml).writer(staxEventItemWriter(null))
-				.build();
-	}
-
+	
 	@StepScope
 	@Bean
-	public StaxEventItemWriter<StudentXml> staxEventItemWriter(
-			@Value("#{jobParameters['outFiles']}") FileSystemResource fileSystemResource) {
-		// String fileName = fileSystemResource.getPath();
-		String fileName = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.xml";
-		File myFile = new File(fileName);
-
-		if (!myFile.exists()) {
-			try {
-				myFile.createNewFile();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		StaxEventItemWriter<StudentXml> staxEventItemWriter = new StaxEventItemWriter<StudentXml>();
-		FileSystemResource fileSystemResource1 = new FileSystemResource(
-				new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.xml"));
-		staxEventItemWriter.setResource(fileSystemResource1);
-		staxEventItemWriter.setRootTagName("students");
-
-		staxEventItemWriter.setMarshaller(new Jaxb2Marshaller() {
-			{
-				setClassesToBeBound(StudentXml.class);
-			}
-		});
-
-		return staxEventItemWriter;
-	}
-
-	private Step stepMysqlToJson() {
-		return stepBuilderFactory.get("First Chunk Step Json").<StudentJdbc, StudentJson>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(jdbcCursorItemReader()).processor(firstItemProcessorJson).writer(jsonFileItemWriterJson(null))
-				.build();
-	}
-
-	private Step firstChunkStepNew6() {
-		return stepBuilderFactory.get("First Chunk Step").<StudentJdbc, StudentJdbc>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(jdbcCursorItemReader())
-				// .processor(firstItemProcessor)
-				.writer(jsonFileItemWriterJdbc(null)).build();
-	}
-
-	@StepScope
-	@Bean
-	public JsonFileItemWriter<StudentJson> jsonFileItemWriterJson(
+	public JsonFileItemWriter<StudentJson> jsonFileItemWriterCsvToJson(
 			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
 		// String fileName = fileSystemResource.getPath();
-		String fileName = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.json";
+		String fileName = base + "students_csv.json";
 		File myFile = new File(fileName);
 
 		if (!myFile.exists()) {
@@ -433,62 +324,13 @@ public class SampleJob {
 				e.printStackTrace();
 			}
 		}
-		FileSystemResource fileSystemResource1 = new FileSystemResource(
-				new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.json"));
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
 		JsonFileItemWriter<StudentJson> jsonFileItemWriter = new JsonFileItemWriter<>(fileSystemResource1,
 				new JacksonJsonObjectMarshaller<StudentJson>());
 
 		return jsonFileItemWriter;
 	}
-
-	@StepScope
-	@Bean
-	public JsonFileItemWriter<StudentJdbc> jsonFileItemWriterJdbc(
-			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
-		String fileName = fileSystemResource.getPath();
-		File myFile = new File(fileName);
-
-		if (!myFile.exists()) {
-			try {
-				myFile.createNewFile();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-
-		JsonFileItemWriter<StudentJdbc> jsonFileItemWriter = new JsonFileItemWriter<>(fileSystemResource,
-				new JacksonJsonObjectMarshaller<StudentJdbc>());
-
-		return jsonFileItemWriter;
-	}
-
-	private Step StepMysqlToCsv() {
-		return stepBuilderFactory.get("First Chunk Step").<StudentJdbc, StudentJdbc>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(jdbcCursorItemReader())
-				// .processor(firstItemProcessor)
-				.writer(flatFileItemWriter(null)).build();
-	}
-
-	public JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader() {
-		JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader = new JdbcCursorItemReader<StudentJdbc>();
-
-		jdbcCursorItemReader.setDataSource(datasource);
-		jdbcCursorItemReader
-				.setSql("select id, first_name as firstName, last_name as lastName," + "email from student");
-
-		jdbcCursorItemReader.setRowMapper(new BeanPropertyRowMapper<StudentJdbc>() {
-			{
-				setMappedClass(StudentJdbc.class);
-			}
-		});
-		jdbcCursorItemReader.setCurrentItemCount(2);
-		jdbcCursorItemReader.setMaxItemCount(8);
-
-		return jdbcCursorItemReader;
-	}
-
+	
 	@StepScope
 	@Bean
 	public FlatFileItemWriter<StudentJdbc> flatFileItemWriter(
@@ -496,7 +338,7 @@ public class SampleJob {
 		FlatFileItemWriter<StudentJdbc> flatFileItemWriter = new FlatFileItemWriter<StudentJdbc>();
 
 		// String fileName = fileSystemResource.getPath();
-		String fileName = "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.csv";
+		String fileName = base + "students.csv";
 		File myFile = new File(fileName);
 
 		if (!myFile.exists()) {
@@ -507,8 +349,7 @@ public class SampleJob {
 				e.printStackTrace();
 			}
 		}
-		FileSystemResource fileSystemResource1 = new FileSystemResource(
-				new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\outFiles\\students.csv"));
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
 		flatFileItemWriter.setResource(fileSystemResource1);
 
 		flatFileItemWriter.setHeaderCallback(new FlatFileHeaderCallback() {
@@ -538,248 +379,87 @@ public class SampleJob {
 
 		return flatFileItemWriter;
 	}
-
-	private Step firstChunkStepNew4() {
-		return stepBuilderFactory.get("First Chunk Step StudentResponse").<StudentResponse, StudentResponse>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(itemReaderAdapter())
-				// .processor(firstItemProcessor)
-				.writer(firstItemWriterResponse).build();
-	}
-
-	public ItemReaderAdapter<StudentResponse> itemReaderAdapter() {
-		ItemReaderAdapter<StudentResponse> itemReaderAdapter = new ItemReaderAdapter<StudentResponse>();
-
-		itemReaderAdapter.setTargetObject(studentService);
-		itemReaderAdapter.setTargetMethod("getStudent");
-		itemReaderAdapter.setArguments(new Object[] { 1L, "Ejemplo" });
-		return itemReaderAdapter;
-	}
-
-	private Step firstChunkStepNew3() {
-		return stepBuilderFactory.get("First Chunk Step").<StudentJdbc, StudentJdbc>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(jdbcCursorItemReader())
-				// .processor(firstItemProcessor)
-				.writer(firstItemWriterJdbc).build();
-	}
-
-	private Step firstChunkStepNew2() {
-		return stepBuilderFactory.get("First Chunk Step").<StudentXml, StudentXml>chunk(3)
-				// .reader(flatFileItemReader(null))
-				.reader(staxEventItemReader(null))
-				// .processor(firstItemProcessor)
-				.writer(firstItemWriterXml).build();
-	}
-
+	
 	@StepScope
 	@Bean
-	public StaxEventItemReader<StudentXml> staxEventItemReader(
-			@Value("#{jobParameters['inputFileXml']}") FileSystemResource fileSystemResource) {
-		StaxEventItemReader<StudentXml> staxEventItemReader = new StaxEventItemReader<StudentXml>();
-		staxEventItemReader.setResource(fileSystemResource);
-		staxEventItemReader.setFragmentRootElementName("student");
-		staxEventItemReader.setUnmarshaller(new Jaxb2Marshaller() {
+	public StaxEventItemWriter<StudentXml> staxEventItemWriter(
+			@Value("#{jobParameters['outFiles']}") FileSystemResource fileSystemResource) {
+		// String fileName = fileSystemResource.getPath();
+		String fileName = base + "students.xml";
+		File myFile = new File(fileName);
+
+		if (!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		StaxEventItemWriter<StudentXml> staxEventItemWriter = new StaxEventItemWriter<StudentXml>();
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
+		staxEventItemWriter.setResource(fileSystemResource1);
+		staxEventItemWriter.setRootTagName("students");
+
+		staxEventItemWriter.setMarshaller(new Jaxb2Marshaller() {
 			{
 				setClassesToBeBound(StudentXml.class);
 			}
 		});
-		return staxEventItemReader;
+
+		return staxEventItemWriter;
 	}
 
-	private Step firstChunkStepNew() {
-		return stepBuilderFactory.get("First Chunk Step").<StudentJson, StudentJson>chunk(3)
+	private Step stepCreateJsonError() {
+		return stepBuilderFactory.get("First Chunk Step Json").<StudentJdbc, StudentJson>chunk(3)
 				// .reader(flatFileItemReader(null))
-				.reader(jsonItemReaderNew(null))
-				// .processor(firstItemProcessor)
-				.writer(firstItemWriterJson).build();
+				.reader(jdbcCursorItemReader()).processor(firstItemProcessorJson).writer(jsonFileItemWriterJson(null))
+				.faultTolerant().skip(FlatFileParseException.class).skip(NullPointerException.class)
+				// .skipLimit(Integer.MAX_VALUE)
+				.skipPolicy(new AlwaysSkipItemSkipPolicy()).build();
 	}
 
-	// @StepScope
-	// @Bean
-	public JsonItemReader<StudentJson> jsonItemReaderNew(
-			@Value("#{jobParameters['inputFileJson']}") FileSystemResource fileSystemResource) {
+	public JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader() {
+		JdbcCursorItemReader<StudentJdbc> jdbcCursorItemReader = new JdbcCursorItemReader<StudentJdbc>();
 
-		FileSystemResource fileSystemResource1 = new FileSystemResource(
-				new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\inputFiles\\students.json"));
+		jdbcCursorItemReader.setDataSource(datasource);
+		jdbcCursorItemReader
+				.setSql("select id, first_name as firstName, last_name as lastName," + "email from student");
 
-		JsonItemReader<StudentJson> jsonItemReader = new JsonItemReader<StudentJson>();
-
-		jsonItemReader.setResource(fileSystemResource);
-		jsonItemReader.setJsonObjectReader(new JacksonJsonObjectReader<>(StudentJson.class));
-
-		jsonItemReader.setMaxItemCount(8);
-		jsonItemReader.setCurrentItemCount(2);
-
-		return jsonItemReader;
-	}
-
-	private Step firstChunkStep() {
-		return stepBuilderFactory.get("First Chunk Step").<StudentJson, StudentJson>chunk(3)
-				.reader(jsonItemReader(null))
-				// .processor(firstItemProcessor) //se puede usar sin processor
-				.writer(firstItemWriterJson).build();
-	}
-
-	@StepScope
-	@Bean
-	public JsonItemReader<StudentJson> jsonItemReader(
-			@Value("#{jobParameters['inputFileJson']}") FileSystemResource fileSystemResource) {
-		JsonItemReader<StudentJson> jsonItemReader = new JsonItemReader<StudentJson>();
-		jsonItemReader.setResource(fileSystemResource);
-		jsonItemReader.setJsonObjectReader(new JacksonJsonObjectReader<>(StudentJson.class));
-		return jsonItemReader;
-	}
-
-	private Step firstChunkStepAntiguo2() {
-		return stepBuilderFactory.get("First Chunk Step").<StudentCsv, StudentCsv>chunk(3)
-				.reader(flatFileItemReader(null))
-				// .processor(firstItemProcessor) //se puede usar sin processor
-				.writer(firstItemWriterCsv).build();
-	}
-
-	@StepScope
-	@Bean
-	public FlatFileItemReader<StudentCsv> flatFileItemReaderError(
-			@Value("#{jobParameters['inputFile']}") FileSystemResource fileSystemResource) {
-		FlatFileItemReader<StudentCsv> flatFileItemReader = new FlatFileItemReader<StudentCsv>();
-
-		FileSystemResource fileSystemResource1 = new FileSystemResource(
-				new File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\inputFiles\\student_error.csv"));
-		
-		flatFileItemReader.setResource(fileSystemResource1);
-
-		flatFileItemReader.setLineMapper(new DefaultLineMapper<StudentCsv>() {
+		jdbcCursorItemReader.setRowMapper(new BeanPropertyRowMapper<StudentJdbc>() {
 			{
-				setLineTokenizer(new DelimitedLineTokenizer() {
-					{
-						setNames("ID", "First Name", "Last Name", "Email");
-					}
-				});
-
-				setFieldSetMapper(new BeanWrapperFieldSetMapper<StudentCsv>() {
-					{
-						setTargetType(StudentCsv.class);
-					}
-				});
-
+				setMappedClass(StudentJdbc.class);
 			}
 		});
+		jdbcCursorItemReader.setCurrentItemCount(2);
+		jdbcCursorItemReader.setMaxItemCount(8);
 
-		/*
-		 * DefaultLineMapper<StudentCsv> defaultLineMapper = new
-		 * DefaultLineMapper<StudentCsv>();
-		 * 
-		 * DelimitedLineTokenizer delimitedLineTokenizer = new DelimitedLineTokenizer();
-		 * delimitedLineTokenizer.setNames("ID", "First Name", "Last Name", "Email");
-		 * 
-		 * defaultLineMapper.setLineTokenizer(delimitedLineTokenizer);
-		 * 
-		 * BeanWrapperFieldSetMapper<StudentCsv> fieldSetMapper = new
-		 * BeanWrapperFieldSetMapper<StudentCsv>();
-		 * fieldSetMapper.setTargetType(StudentCsv.class);
-		 * 
-		 * defaultLineMapper.setFieldSetMapper(fieldSetMapper);
-		 * 
-		 * flatFileItemReader.setLineMapper(defaultLineMapper);
-		 */
-
-		flatFileItemReader.setLinesToSkip(1);
-
-		return flatFileItemReader;
+		return jdbcCursorItemReader;
 	}
-
+	
 	@StepScope
 	@Bean
-	public FlatFileItemReader<StudentCsv> flatFileItemReader(
-			@Value("#{jobParameters['inputFile']}") FileSystemResource fileSystemResource) {
-		FlatFileItemReader<StudentCsv> flatFileItemReader = new FlatFileItemReader<StudentCsv>();
+	public JsonFileItemWriter<StudentJson> jsonFileItemWriterJson(
+			@Value("#{jobParameters['outFilesJson']}") FileSystemResource fileSystemResource) {
+		// String fileName = fileSystemResource.getPath();
+		String fileName = base + "students.json";
+		File myFile = new File(fileName);
 
-		flatFileItemReader.setResource(fileSystemResource);
-
-		flatFileItemReader.setLineMapper(new DefaultLineMapper<StudentCsv>() {
-			{
-				setLineTokenizer(new DelimitedLineTokenizer() {
-					{
-						setNames("ID", "First Name", "Last Name", "Email");
-					}
-				});
-
-				setFieldSetMapper(new BeanWrapperFieldSetMapper<StudentCsv>() {
-					{
-						setTargetType(StudentCsv.class);
-					}
-				});
-
+		if (!myFile.exists()) {
+			try {
+				myFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
-		});
+		}
+		FileSystemResource fileSystemResource1 = new FileSystemResource(new File(fileName));
+		JsonFileItemWriter<StudentJson> jsonFileItemWriter = new JsonFileItemWriter<>(fileSystemResource1,
+				new JacksonJsonObjectMarshaller<StudentJson>());
 
-		/*
-		 * DefaultLineMapper<StudentCsv> defaultLineMapper = new
-		 * DefaultLineMapper<StudentCsv>();
-		 * 
-		 * DelimitedLineTokenizer delimitedLineTokenizer = new DelimitedLineTokenizer();
-		 * delimitedLineTokenizer.setNames("ID", "First Name", "Last Name", "Email");
-		 * 
-		 * defaultLineMapper.setLineTokenizer(delimitedLineTokenizer);
-		 * 
-		 * BeanWrapperFieldSetMapper<StudentCsv> fieldSetMapper = new
-		 * BeanWrapperFieldSetMapper<StudentCsv>();
-		 * fieldSetMapper.setTargetType(StudentCsv.class);
-		 * 
-		 * defaultLineMapper.setFieldSetMapper(fieldSetMapper);
-		 * 
-		 * flatFileItemReader.setLineMapper(defaultLineMapper);
-		 */
-
-		flatFileItemReader.setLinesToSkip(1);
-
-		return flatFileItemReader;
+		return jsonFileItemWriter;
 	}
-
-	// @StepScope
-	// @Bean
-	public FlatFileItemReader<StudentCsv> flatFileItemReaderAntiguo(
-			@Value("#{jobParameters['inputFile']}") FileSystemResource fileSystemResource) {
-		FlatFileItemReader<StudentCsv> flatFileItemReader = new FlatFileItemReader<StudentCsv>();
-
-		flatFileItemReader.setResource(fileSystemResource);
-
-		// flatFileItemReader.setResource(new FileSystemResource(
-		// new
-		// File("C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\inputFiles\\students.csv")));
-		flatFileItemReader.setLineMapper(new DefaultLineMapper<StudentCsv>() {
-			{
-				setLineTokenizer(new DelimitedLineTokenizer() {
-					{
-						setNames("ID", "First Name", "Last Name", "Email");
-						// en caso de no usar comillas si usa |
-						// setDelimiter("|");
-					}
-				});
-				setFieldSetMapper(new BeanWrapperFieldSetMapper<StudentCsv>() {
-					{
-						setTargetType(StudentCsv.class);
-					}
-				});
-			}
-		});
-		flatFileItemReader.setLinesToSkip(1);
-		return flatFileItemReader;
-	}
-
-	private Step firstChunkStepAntiguo() {
-		return stepBuilderFactory.get("First Chunk Step").<Integer, Long>chunk(3).reader(firstItemReader)
-				.processor(firstItemProcessor) // se puede usar sin processor
-				.writer(firstItemWriter).build();
-	}
-
-	@Bean
-	public Job firstJob() {
-		return jobBuilderFactory.get("First Job").incrementer(new RunIdIncrementer()).start(firstStep())
-				.next(secondStep()).listener(firstJobListener).build();
-	}
-
+	
 	private Step firstStep() {
 		return stepBuilderFactory.get("First step").tasklet(firstTasklet()).listener(firstStepListener).build();
 	}
@@ -804,5 +484,4 @@ public class SampleJob {
 	private Tasklet secondTaskletMetodo(int id) {
 		return new SecondTasklet(id);
 	}
-
 }

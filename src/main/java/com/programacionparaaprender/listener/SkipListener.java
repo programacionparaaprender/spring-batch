@@ -6,14 +6,16 @@ import java.util.Date;
 
 import org.springframework.batch.core.annotation.OnSkipInProcess;
 import org.springframework.batch.core.annotation.OnSkipInRead;
+import org.springframework.batch.core.annotation.OnSkipInWrite;
 import org.springframework.batch.item.file.FlatFileParseException;
 import org.springframework.stereotype.Component;
 
 import com.programacionparaaprender.model.StudentCsv;
+import com.programacionparaaprender.model.StudentJson;
 
 @Component
 public class SkipListener {
-
+	
 	@OnSkipInRead
 	public void skipInRead(Throwable th) {
 		if(th instanceof FlatFileParseException) {
@@ -29,6 +31,14 @@ public class SkipListener {
 		= "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\Chunk Job1\\First Chunk Step1\\processor\\SkipInProcess.txt";
 		createFile(filePath, studentCsv.toString());
 	}
+	
+	@OnSkipInWrite
+	public void skipInWriter(StudentJson studentJson, Throwable th) {
+		String filePath 
+		= "C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\Chunk Job1\\First Chunk Step1\\writer\\SkipInWriter.txt";
+		createFile(filePath, studentJson.toString());
+	}
+	
 	
 	public void createFile(String filePath, String data) {
 		try(FileWriter fileWriter = new FileWriter(new File(filePath), true)) {

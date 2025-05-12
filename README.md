@@ -9,3 +9,6 @@
 ###
 >- OutputFiles=C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\OutputFiles
 >- inputFileXml=C:\\Users\\luis1\\Documents\\htdocs\\telefonica\\spring-batch\\inputFiles\\students.xml
+
+### pendiente corregir error java.lang.IllegalArgumentException: jdbcUrl is required with driverClassName.
+>- https://stackoverflow.com/questions/56100898/jdbcurl-is-required-with-driverclassname
